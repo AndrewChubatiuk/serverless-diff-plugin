@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "outDir": "dist",
+    "sourceMap": true,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "rootDir": ".",
+    "target": "es6",
+    "noEmit": true
+  },
+  "include": ["lib/**/*", "test/**/*"],
+  "files": ["node_modules/jest-extended/types/index.d.ts"],
+  "exclude": ["node_modules"]
+}
