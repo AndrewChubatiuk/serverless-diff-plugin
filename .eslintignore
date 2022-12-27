@@ -1,7 +1,0 @@
-.tmp/
-build/
-coverage/
-docs/
-node_modules/
-results/
-.serverless
