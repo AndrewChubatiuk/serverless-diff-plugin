@@ -9,6 +9,11 @@ interface ServerlessProvider {
     }
 }
 
+interface DiffCommon {
+    providersPath: string,
+    [key: string]: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+}
+
 interface Serverless {
     getProvider: (name: string) => ServerlessProvider;
     serviceDir: string,
@@ -23,7 +28,7 @@ interface Serverless {
             path: string,
         }
         custom: {
-            diff: object
+            diff: DiffCommon,
         },
         provider: {
             name: string
@@ -83,11 +88,13 @@ class ServerlessPlugin {
     }
 
     async load() {
-        this._specProvider = await import(join('providers', this.providerName))
+        const custom = this.serverless.service.custom;
+        const config = Object.assign({}, {
+            providersPath: './providers',
+        }, custom && custom.diff || {});
+        this._specProvider = await import(`${config.providersPath}/${this.providerName}`)
             .then((providerMod) => {
                 this.serverless.cli.log(`Loading '${this.providerName}' module`);
-                const custom = this.serverless.service.custom;
-                const config = custom && custom.diff || {};
                 const log = this.serverless.cli.log;
                 const provider = this.serverless.getProvider(this.providerName);
                 const SpecProvider = providerMod.SpecProvider;

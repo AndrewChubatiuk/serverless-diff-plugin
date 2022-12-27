@@ -1,6 +1,6 @@
 {
-  "name": "serverless-plugin-diff",
-  "version": "3.0.0",
+  "name": "serverless-diff-plugin",
+  "version": "0.0.8",
   "description": "Plugin for Serverless Framework v3.x which compares your local AWS CloudFormation templates against deployed ones.",
   "main": "dist/lib/index.js",
   "scripts": {
@@ -9,19 +9,19 @@
     "lint": "eslint .",
     "test": "jest"
   },
-  "author": "Nick den Engelsman",
+  "author": "Andrew Chubatiuk",
   "maintainers": [
     {
-      "email": "nickdenengelsman@gmail.com",
-      "name": "Nick den Engelsman"
+      "email": "andrew.chubatiuk@gmail.com",
+      "name": "Andrew Chubatiuk"
     }
   ],
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/nicka/serverless-plugin-diff"
+    "url": "https://github.com/AndrewChubatiuk/serverless-diff-plugin"
   },
-  "homepage": "https://github.com/nicka/serverless-plugin-diff",
+  "homepage": "https://github.com/AndrewChubatiuk/serverless-diff-plugin",
   "keywords": [
     "aws",
     "diff",

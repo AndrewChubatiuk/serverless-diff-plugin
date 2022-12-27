@@ -51,7 +51,8 @@ beforeEach(async () => {
                 diff: {
                     excludes: undefined,
                     reportPath: undefined,
-                }
+                    providersPath: 'providers',
+		}
             },
         },
         cli: {
