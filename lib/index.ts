@@ -1,12 +1,13 @@
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { Provider } from './specs'
+import { ServerlessError } from '@serverless-components/core'
 
 interface ServerlessProvider {
     naming: {
         getCompiledTemplateFileName: () => string;
         getStackName: () => string;
-    }
+    },
 }
 
 interface DiffCommon {
@@ -32,6 +33,7 @@ interface Serverless {
         },
         provider: {
             name: string
+            [key: string]: any // eslint-disable-line @typescript-eslint/no-explicit-any
         }
     }
 }
@@ -63,14 +65,16 @@ class ServerlessPlugin {
                     await this.serverless.pluginManager.spawn('package');
                 }
             },
-            'diff:diff': this.diff.bind(this),
+            'diff:diff': async () => {
+                await this.diff();
+            },
         };
 
 
         this.providerName = this.serverless.service.provider.name;
         if (!this.serverless.getProvider(this.providerName)) {
             const errorMessage = `The specified provider '${this.providerName}' does not exist.`;
-            throw new Error(errorMessage)
+            throw new ServerlessError(errorMessage, 'PROVIDER_NOT_FOUND');
         }
 
         const provider = this.serverless.getProvider(this.providerName);
@@ -92,34 +96,32 @@ class ServerlessPlugin {
         const config = Object.assign({}, {
             providersPath: './providers',
         }, custom && custom.diff || {});
-        this._specProvider = await import(`${config.providersPath}/${this.providerName}`)
-            .then((providerMod) => {
-                this.serverless.cli.log(`Loading '${this.providerName}' module`);
-                const log = this.serverless.cli.log;
-                const provider = this.serverless.getProvider(this.providerName);
-                const SpecProvider = providerMod.SpecProvider;
-                return Promise.resolve(new SpecProvider(provider, config, log));
-            })
-            .catch((err) => {
-                return Promise.reject(`No '${this.providerName}' spec provider found: ${err.message}`);
-            });
+        try {
+            this.serverless.cli.log(`Loading '${this.providerName}' module`);
+            const providerMod = await import(`${config.providersPath}/${this.providerName}`);
+            const SpecProvider = providerMod.SpecProvider;
+            const log = this.serverless.cli.log;
+            const provider = this.serverless.service.provider;
+            this._specProvider = new SpecProvider(provider, config, log);
+
+        } catch (err) {
+            throw new ServerlessError(`No '${this.providerName}' spec provider found: ${err.message}`, 'NO_MODULE_FOUND');
+        }
     }
 
-    diff() {
+    async diff() {
         this.serverless.cli.log('Running diff against deployed template');
-
-        return readFile(this.newTemplateFile, 'utf8')
-            .then(data => {
-                const newTemplate = JSON.parse(data);
-                return this._specProvider.diff(this.specName, newTemplate);
-            })
-            .catch((err) => {
-                if (err.code === 'ENOENT') {
-                    const errorPrefix = `${this.newTemplateFile} could not be found`;
-                    return Promise.reject(errorPrefix);
-                }
-                return Promise.reject(err.message);
-            });
+        try {
+            const data = await readFile(this.newTemplateFile, 'utf8');
+            const newTemplate = JSON.parse(data);
+            return this._specProvider.diff(this.specName, newTemplate);
+        } catch (err) {
+            if (err.code === 'ENOENT') {
+                const errorPrefix = `${this.newTemplateFile} could not be found`;
+                throw new ServerlessError(errorPrefix, 'NEW_TEMPLATE_NOT_FOUND');
+            }
+            throw new ServerlessError(err.message, 'UNKNOWN_ERROR');
+        }
     }
 }
 

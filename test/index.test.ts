@@ -14,11 +14,11 @@ import { SpecProviderBase, Template, ConfigBase } from '../lib/specs';
 import { SpecProvider } from '../lib/providers/aws';
 
 class AWSError extends Error {
-    code: string
+    name: string
     message: string
-    constructor(code: string, message: string) {
+    constructor(name: string, message: string) {
         super();
-        this.code = code;
+        this.name = name;
         this.message = message;
     }
 }
@@ -52,7 +52,7 @@ beforeEach(async () => {
                     excludes: undefined,
                     reportPath: undefined,
                     providersPath: 'providers',
-		}
+                }
             },
         },
         cli: {
@@ -76,20 +76,18 @@ beforeEach(async () => {
         slsDir,
         serverless.service.provider.naming.getCompiledTemplateFileName()
     );
-    await mkdir(dirname(templatePath), { recursive: true })
-        .then(() => {
-            return writeFile(templatePath, JSON.stringify({
-                Resources: {
-                    Test: {
-                        Type: 'AWS::Lambda::Function',
-                        Properties: {
-                            Handler: 'index.handler',
-                            Runtime: 'python3.9',
-                        },
-                    },
+    await mkdir(dirname(templatePath), { recursive: true });
+    await writeFile(templatePath, JSON.stringify({
+        Resources: {
+            Test: {
+                Type: 'AWS::Lambda::Function',
+                Properties: {
+                    Handler: 'index.handler',
+                    Runtime: 'python3.9',
                 },
-            }, null, 4));
-        });
+            },
+        },
+    }, null, 4));
 });
 
 describe('serverless-plugin-diff', () => {
@@ -105,9 +103,9 @@ describe('serverless-plugin-diff', () => {
                     setup() {
                         this.log('inside provider setup()');
                     }
-                    diff(specName: string, newTpl: Template) {
+                    async diff(specName: string, newTpl: Template) {
                         this.log(`${specName}-${newTpl}`);
-                        return Promise.resolve({ specName: specName });
+                        return { specName: specName };
                     }
                 }
             }
@@ -130,21 +128,33 @@ describe('serverless-plugin-diff', () => {
         });
         test('generate valid diff', async () => {
             await plugin.load();
-            await expect(plugin.diff()).resolves.toMatchObject({
+            expect(await plugin.diff()).toMatchObject({
                 specName: serverless.service.provider.naming.getStackName(),
             });
         });
         test('unknown error during diff generation', async () => {
             await chmod(templatePath, 0o000);
-            await expect(plugin.diff()).rejects.toMatch(/EACCES: permission denied.*/);
+            try {
+                await plugin.diff();
+            } catch (err) {
+                expect(err.message).toMatch(/EACCES: permission denied.*/);
+            }
         });
         test('fail diff when spec doesnt exist', async () => {
             await unlink(templatePath);
-            await expect(plugin.diff()).rejects.toMatch(/.* could not be found/);
+            try {
+                await plugin.diff();
+            } catch (err) {
+                expect(err.message).toMatch(/.* could not be found/);
+            }
         });
         test('run unsuccessfully with not-existing stack plugin', async () => {
             jest.dontMock(`providers/${providerName}`);
-            await expect(plugin.load()).rejects.toMatch(/No '[\w-]+' spec provider found.*/);
+            try {
+                await plugin.load();
+            } catch (err) {
+                expect(err.message).toMatch(/No '[\w-]+' spec provider found.*/);
+            }
         });
         test('run unsuccessfully with not-existing plugin name', () => {
             serverless.getProvider = (providerName) => {
@@ -163,6 +173,32 @@ describe('serverless-plugin-diff', () => {
         test('registers the appropriate hooks', () => {
             expect(typeof plugin.hooks['before:diff:diff']).toBe('function');
             expect(typeof plugin.hooks['diff:diff']).toBe('function');
+        });
+        test('check provider execution fails', async () => {
+            interface TestProvider { param: string; }
+            interface TestConfig extends ConfigBase { param: string; }
+            jest.doMock(`providers/${providerName}`, () => {
+                return {
+                    __esModule: true,
+                    SpecProvider: class extends SpecProviderBase<TestProvider, TestConfig> {
+                        setup() {
+                            this.log('inside provider setup()');
+                        }
+                        diff(specName: string, newTpl: Template) {
+                            this.log(`${specName}-${newTpl}`);
+                            throw new Error('Error');
+                        }
+                    }
+                }
+            }, {
+                virtual: true,
+            });
+            await plugin.load();
+            try {
+                await plugin.diff();
+            } catch (err) {
+                expect(err.message).toMatch(/Error/);
+            }
         });
     });
     describe('SpecProviderBase', () => {
@@ -319,7 +355,7 @@ describe('serverless-plugin-diff', () => {
                 },
             });
         });
-        test('diff remote template unknown error', () => {
+        test('diff remote template unknown error', async () => {
             const stackName = `test-${randomString(8)}`;
             const errMessage = `Don't know what to do with a stack named ${stackName}`;
             mockCfnClient.on(GetTemplateCommand).rejects(new AWSError(
@@ -327,8 +363,11 @@ describe('serverless-plugin-diff', () => {
                 errMessage,
             ));
             provider.client = mockCfnClient;
-            expect(provider.diff(`test-${randomString(8)}`, { foo: 'bar' })).rejects.toEqual(errMessage);
+            try {
+                await provider.diff(`test-${randomString(8)}`, { foo: 'bar' })
+            } catch (err) {
+                expect(err.message).toMatch(errMessage);
+            }
         });
-
     });
 });

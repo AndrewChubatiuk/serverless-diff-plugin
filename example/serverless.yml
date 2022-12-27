@@ -1,0 +1,54 @@
+frameworkVersion: '3'
+
+service: example-function
+
+plugins:
+  - serverless-plugin-git-variables
+  - serverless-diff-plugin
+
+custom:
+  diff: 
+    reportPath: report.json
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: ${opt:stage}
+  region: us-east-1
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - ec2:RunInstances
+          Resource:
+            - 'arn:aws:ec2:*:*:instance/*'
+            - 'arn:aws:ec2:*:*:volume/*'
+            - 'arn:aws:ec2:*:*:subnet/*'
+            - 'arn:aws:ec2:*:*:image/*'
+            - 'arn:aws:ec2:*:*:security-group/*'
+            - 'arn:aws:ec2:*:*:network-interface/*'
+        - Effect: Allow
+          Action:
+            - ec2:DescribeVolumes
+            - ec2:DescribeInstances
+            - ec2:DescribeInstanceAttribute
+            - ec2:DescribeInstanceStatus
+          Resource:
+            - "*"
+        - Effect: Allow
+          Action:
+            - ec2:CreateTags
+            - ec2:StartInstances
+            - ec2:StopInstances
+            - ec2:TerminateInstances
+          Resource:
+            - "arn:aws:ec2:*:*:instance/*"
+  environment:
+    ENV: ${opt:stage}
+    #   AWS_ACCOUNT_ID: "${aws:accountId}"
+
+functions:
+  api:
+    description: ${git:sha1} - ${git:branch}
+    handler: index.handler

@@ -2,6 +2,7 @@ import { TemplateDiff, formatDifferences, diffTemplate } from '@aws-cdk/cloudfor
 import { SpecProviderBase, Template, ConfigBase } from '../specs';
 import { CloudFormationClient, GetTemplateCommand } from '@aws-sdk/client-cloudformation';
 import chalk from 'chalk';
+import { ServerlessError } from '@serverless-components/core'
 
 interface AWSProvider {
     region: string;
@@ -59,23 +60,21 @@ export class SpecProvider extends SpecProviderBase<AWSProvider, AWSConfig> {
         return report;
     }
 
-    diff(specName: string, newTemplate: Template) {
+    async diff(specName: string, newTemplate: Template) {
         const command = new GetTemplateCommand({
             StackName: specName,
             TemplateStage: 'Processed',
         });
-        return this._client
-            .send(command)
-            .then((data) => {
-                const oldTemplate = JSON.parse(data.TemplateBody);
-                return Promise.resolve(this.exec(oldTemplate, newTemplate));
-            })
-            .catch((err) => {
-                if (err.code === 'ValidationError') {
-                    const oldTemplate = {};
-                    return Promise.resolve(this.exec(oldTemplate, newTemplate));
-                }
-                return Promise.reject(err.message);
-            });
+        try {
+            const resp = await this._client.send(command);
+            const oldTemplate = JSON.parse(resp.TemplateBody);
+            return this.exec(oldTemplate, newTemplate);
+        } catch (err) {
+            if (err.name === 'ValidationError') {
+                const oldTemplate = {};
+                return this.exec(oldTemplate, newTemplate);
+            }
+            throw new ServerlessError(err.message, 'UNKNOWN_ERROR');
+        }
     }
 }

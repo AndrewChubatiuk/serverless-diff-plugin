@@ -1,0 +1,11 @@
+{
+  "license": "MIT",
+  "scripts": {
+    "serverless": "serverless"
+  },
+  "devDependencies": {
+    "serverless": "^3.26.0",
+    "serverless-diff-plugin": "^0.0.9",
+    "serverless-plugin-git-variables": "^5.2.0"
+  }
+}

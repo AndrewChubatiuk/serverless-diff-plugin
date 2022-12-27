@@ -1372,6 +1372,11 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
+"@serverless-components/core@^0.1.0":
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/@serverless-components/core/-/core-0.1.0.tgz#844919209a35816f06d2f3f65a6531bdb14a0b97"
+  integrity sha512-FfoneA3eNDwitw3GBwZoKCA+Qk7F2T1RKENbBZoKEJbq0imOxQ6Xtz6NquhFD0vJwBlvGCaP+pPDd0hsZOrB8A==
+
 "@sinclair/typebox@^0.24.1":
   version "0.24.51"
   resolved "https://registry.yarnpkg.com/@sinclair/typebox/-/typebox-0.24.51.tgz#645f33fe4e02defe26f2f5c0410e1c094eac7f5f"
