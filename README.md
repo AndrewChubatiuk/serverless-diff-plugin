@@ -12,6 +12,8 @@ Plugin for Serverless Framework v3.x which compares your local AWS CloudFormatio
 serverless diff --stage REPLACEME [--region REPLACEME]
 ```
 
+![](https://github.com/AndrewChubatiuk/serverless-plugin-diff/blob/master/usage.gif)
+
 # Install
 
 Execute npm install in your Serverless project.
