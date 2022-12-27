@@ -5,6 +5,7 @@
     "sourceMap": true,
     "module": "commonjs",
     "moduleResolution": "node",
+    "declaration": true,
     "rootDir": ".",
     "target": "es6"
   },
