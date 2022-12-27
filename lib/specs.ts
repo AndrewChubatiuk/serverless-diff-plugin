@@ -14,18 +14,30 @@ export interface Provider {
     diff: (specName: string, newTemplate: Template) => void;
 }
 
+type ErrorClass = { new(msg: string): void; }
+
+export interface ServerlessClasses {
+    Error: ErrorClass
+}
+
+export interface ServerlessLogger {
+    [key: string]: (msg: string) => void
+}
+
 export abstract class SpecProviderBase<ServerlessProvider, Config extends ConfigBase> implements Provider {
     protected config: Config;
     protected provider: ServerlessProvider;
-    protected log: (msg: string) => void;
+    protected log: ServerlessLogger;
+    protected classes: ServerlessClasses;
 
     abstract diff(specName: string, newTemplate: Template): void;
     protected abstract setup();
 
-    constructor(provider: ServerlessProvider, config: Config, log: (msg: string) => void) {
+    constructor(provider: ServerlessProvider, config: Config, log: ServerlessLogger, classes: ServerlessClasses) {
         this.provider = provider;
         this.config = config;
         this.log = log;
+        this.classes = classes;
         this.setup();
     }
 

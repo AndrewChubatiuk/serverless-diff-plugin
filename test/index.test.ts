@@ -27,6 +27,7 @@ const resultsBaseDir = "results"
 
 let serverless;
 let templatePath;
+let log;
 
 function randomString(length: number): string {
     return randomBytes(length).toString('hex');
@@ -34,9 +35,17 @@ function randomString(length: number): string {
 
 beforeEach(async () => {
     vol.reset();
+    log = {
+        info: jest.fn(),
+        error: jest.fn(),
+        debug: jest.fn(),
+    }
     const suffix = randomString(8);
     serverless = {
         serviceDir: resolve(__dirname, resultsBaseDir),
+        classes: {
+            Error: Error,
+        },
         service: {
             provider: {
                 name: `provider-${suffix}`,
@@ -55,12 +64,8 @@ beforeEach(async () => {
                 }
             },
         },
-        cli: {
-            log: jest.fn(),
-        },
     };
     serverless.getProvider = (providerName) => {
-        serverless.cli.log(`using ${providerName} provider`);
         if (serverless.service.provider.name == providerName) {
             return serverless.service.provider;
         } else {
@@ -101,10 +106,10 @@ describe('serverless-plugin-diff', () => {
                 __esModule: true,
                 SpecProvider: class extends SpecProviderBase<TestProvider, TestConfig> {
                     setup() {
-                        this.log('inside provider setup()');
+                        this.log.info('inside provider setup()');
                     }
                     async diff(specName: string, newTpl: Template) {
-                        this.log(`${specName}-${newTpl}`);
+                        this.log.info(`${specName}-${newTpl}`);
                         return { specName: specName };
                     }
                 }
@@ -116,7 +121,7 @@ describe('serverless-plugin-diff', () => {
     describe('ServerlessPlugin', () => {
         let plugin;
         beforeEach(() => {
-            plugin = new ServerlessPlugin(serverless);
+            plugin = new ServerlessPlugin(serverless, {}, { log });
         })
         test('load successfully with existing stack plugin', async () => {
             await plugin.load();
@@ -158,7 +163,6 @@ describe('serverless-plugin-diff', () => {
         });
         test('run unsuccessfully with not-existing plugin name', () => {
             serverless.getProvider = (providerName) => {
-                serverless.cli.log(`using ${providerName} provider`);
                 if ('not-existing' == providerName) {
                     return serverless.service.provider;
                 } else {
@@ -166,7 +170,7 @@ describe('serverless-plugin-diff', () => {
                 }
             };
             expect(() => {
-                new ServerlessPlugin(serverless)
+                new ServerlessPlugin(serverless, {}, { log })
             }).toThrowWithMessage(Error, /The specified provider '[\w-]+' does not exist./);
         });
 
@@ -182,10 +186,10 @@ describe('serverless-plugin-diff', () => {
                     __esModule: true,
                     SpecProvider: class extends SpecProviderBase<TestProvider, TestConfig> {
                         setup() {
-                            this.log('inside provider setup()');
+                            this.log.info('inside provider setup()');
                         }
                         diff(specName: string, newTpl: Template) {
-                            this.log(`${specName}-${newTpl}`);
+                            this.log.info(`${specName}-${newTpl}`);
                             throw new Error('Error');
                         }
                     }
@@ -213,7 +217,7 @@ describe('serverless-plugin-diff', () => {
             const provider = new providerMod.SpecProvider(
                 serverless.service.provider,
                 serverless.service.custom.diff,
-                serverless.cli.log,
+                log,
             );
             expect(provider.exclude(serverless)).toEqual(serverless);
         });
@@ -226,17 +230,19 @@ describe('serverless-plugin-diff', () => {
             const provider = new providerMod.SpecProvider(
                 serverless.service.provider,
                 serverless.service.custom.diff,
-                serverless.cli.log,
+                log,
             );
             expect(provider.exclude(serverless)).toEqual({
-                cli: serverless.cli,
+                classes: {
+                    Error: Error
+                },
             });
         });
         test('generate report with undefined path', async () => {
             const provider = new providerMod.SpecProvider(
                 serverless.service.provider,
                 serverless.service.custom.diff,
-                serverless.cli.log,
+                log,
             );
             const startFsSize = vol.toJSON().size;
             provider.generateReport({});
@@ -249,7 +255,7 @@ describe('serverless-plugin-diff', () => {
             const provider = new providerMod.SpecProvider(
                 serverless.service.provider,
                 serverless.service.custom.diff,
-                serverless.cli.log,
+                log,
             );
             const bar = `bar-${randomString(8)}`
             provider.generateReport({ foo: bar });
@@ -271,7 +277,8 @@ describe('serverless-plugin-diff', () => {
             provider = new AWSSpecProvider(
                 serverless.service.provider,
                 serverless.service.custom.diff,
-                serverless.cli.log,
+                log,
+                { Error: Error },
             );
 
         });

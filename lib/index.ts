@@ -1,7 +1,6 @@
 import { readFile } from 'fs/promises';
 import { join } from 'path';
-import { Provider } from './specs'
-import { ServerlessError } from '@serverless-components/core'
+import { Provider, ServerlessClasses, ServerlessLogger } from './specs'
 
 interface ServerlessProvider {
     naming: {
@@ -18,12 +17,10 @@ interface DiffCommon {
 interface Serverless {
     getProvider: (name: string) => ServerlessProvider;
     serviceDir: string,
-    cli: {
-        log: (msg: string) => void;
-    },
     pluginManager: {
         spawn: (cmd: string) => void
     },
+    classes: ServerlessClasses,
     service: {
         package: {
             path: string,
@@ -44,12 +41,13 @@ class ServerlessPlugin {
     protected specName: string;
     protected _specProvider: Provider;
     protected providerName: string;
+    protected log: ServerlessLogger;
     public hooks: object;
     public commands: object;
 
-    constructor(serverless: Serverless) {
+    constructor(serverless: Serverless, options: object, { log }) {
         this.serverless = serverless;
-
+        this.log = log;
         this.commands = {
             diff: {
                 usage: 'Compares new AWS CloudFormation templates against old ones',
@@ -74,7 +72,7 @@ class ServerlessPlugin {
         this.providerName = this.serverless.service.provider.name;
         if (!this.serverless.getProvider(this.providerName)) {
             const errorMessage = `The specified provider '${this.providerName}' does not exist.`;
-            throw new ServerlessError(errorMessage, 'PROVIDER_NOT_FOUND');
+            throw new this.serverless.classes.Error(errorMessage);
         }
 
         const provider = this.serverless.getProvider(this.providerName);
@@ -97,20 +95,19 @@ class ServerlessPlugin {
             providersPath: './providers',
         }, custom && custom.diff || {});
         try {
-            this.serverless.cli.log(`Loading '${this.providerName}' module`);
+            this.log.info(`Loading '${this.providerName}' module`);
             const providerMod = await import(`${config.providersPath}/${this.providerName}`);
             const SpecProvider = providerMod.SpecProvider;
-            const log = this.serverless.cli.log;
             const provider = this.serverless.service.provider;
-            this._specProvider = new SpecProvider(provider, config, log);
+            this._specProvider = new SpecProvider(provider, config, this.log, this.serverless.classes);
 
         } catch (err) {
-            throw new ServerlessError(`No '${this.providerName}' spec provider found: ${err.message}`, 'NO_MODULE_FOUND');
+            throw new this.serverless.classes.Error(`No '${this.providerName}' spec provider found: ${err.message}`);
         }
     }
 
     async diff() {
-        this.serverless.cli.log('Running diff against deployed template');
+        this.log.info('Running diff against deployed template');
         try {
             const data = await readFile(this.newTemplateFile, 'utf8');
             const newTemplate = JSON.parse(data);
@@ -118,9 +115,9 @@ class ServerlessPlugin {
         } catch (err) {
             if (err.code === 'ENOENT') {
                 const errorPrefix = `${this.newTemplateFile} could not be found`;
-                throw new ServerlessError(errorPrefix, 'NEW_TEMPLATE_NOT_FOUND');
+                throw new this.serverless.classes.Error(errorPrefix);
             }
-            throw new ServerlessError(err.message, 'UNKNOWN_ERROR');
+            throw new this.serverless.classes.Error(err.message);
         }
     }
 }

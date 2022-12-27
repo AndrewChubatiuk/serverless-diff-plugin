@@ -2,7 +2,6 @@ import { TemplateDiff, formatDifferences, diffTemplate } from '@aws-cdk/cloudfor
 import { SpecProviderBase, Template, ConfigBase } from '../specs';
 import { CloudFormationClient, GetTemplateCommand } from '@aws-sdk/client-cloudformation';
 import chalk from 'chalk';
-import { ServerlessError } from '@serverless-components/core'
 
 interface AWSProvider {
     region: string;
@@ -36,7 +35,7 @@ export class SpecProvider extends SpecProviderBase<AWSProvider, AWSConfig> {
             }
             formatDifferences(stream, diff);
         } else {
-            this.log(chalk.green('There were no differences'));
+            this.log.info(chalk.green('There were no differences'));
         }
         return diff;
     }
@@ -74,7 +73,7 @@ export class SpecProvider extends SpecProviderBase<AWSProvider, AWSConfig> {
                 const oldTemplate = {};
                 return this.exec(oldTemplate, newTemplate);
             }
-            throw new ServerlessError(err.message, 'UNKNOWN_ERROR');
+            throw new this.classes.Error(err.message);
         }
     }
 }
