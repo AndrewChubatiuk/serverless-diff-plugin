@@ -51,8 +51,8 @@ beforeEach(async () => {
                 name: `provider-${suffix}`,
                 stage: `stage-${suffix}`,
                 region: 'eu-west-1',
+                stackName: `stack-${suffix}`,
                 naming: {
-                    getStackName: () => `stack-${suffix}`,
                     getCompiledTemplateFileName: () => `template-${suffix}.json`,
                 },
             },
@@ -108,9 +108,9 @@ describe('serverless-plugin-diff', () => {
                     setup() {
                         this.log.info('inside provider setup()');
                     }
-                    async diff(specName: string, newTpl: Template) {
-                        this.log.info(`${specName}-${newTpl}`);
-                        return { specName: specName };
+                    async diff(stackName: string, newTpl: Template) {
+                        this.log.info(`${stackName}-${newTpl}`);
+                        return { stackName: stackName };
                     }
                 }
             }
@@ -134,7 +134,7 @@ describe('serverless-plugin-diff', () => {
         test('generate valid diff', async () => {
             await plugin.load();
             expect(await plugin.diff()).toMatchObject({
-                specName: serverless.service.provider.naming.getStackName(),
+                stackName: serverless.service.provider.stackName,
             });
         });
         test('unknown error during diff generation', async () => {
@@ -188,8 +188,8 @@ describe('serverless-plugin-diff', () => {
                         setup() {
                             this.log.info('inside provider setup()');
                         }
-                        diff(specName: string, newTpl: Template) {
-                            this.log.info(`${specName}-${newTpl}`);
+                        diff(stackName: string, newTpl: Template) {
+                            this.log.info(`${stackName}-${newTpl}`);
                             throw new Error('Error');
                         }
                     }

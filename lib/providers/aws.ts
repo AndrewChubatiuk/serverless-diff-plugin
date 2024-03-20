@@ -59,9 +59,9 @@ export class SpecProvider extends SpecProviderBase<AWSProvider, AWSConfig> {
         return report;
     }
 
-    async diff(specName: string, newTemplate: Template) {
+    async diff(stackName: string, newTemplate: Template) {
         const command = new GetTemplateCommand({
-            StackName: specName,
+            StackName: stackName,
             TemplateStage: 'Processed',
         });
         try {
