@@ -11,7 +11,7 @@ export interface ConfigBase {
 }
 
 export interface Provider {
-    diff: (specName: string, newTemplate: Template) => void;
+    diff: (stackName: string, newTemplate: Template) => void;
 }
 
 type ErrorClass = { new(msg: string): void; }
@@ -30,7 +30,7 @@ export abstract class SpecProviderBase<ServerlessProvider, Config extends Config
     protected log: ServerlessLogger;
     protected classes: ServerlessClasses;
 
-    abstract diff(specName: string, newTemplate: Template): void;
+    abstract diff(stackName: string, newTemplate: Template): void;
     protected abstract setup();
 
     constructor(provider: ServerlessProvider, config: Config, log: ServerlessLogger, classes: ServerlessClasses) {

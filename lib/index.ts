@@ -3,10 +3,10 @@ import { join } from 'path';
 import { Provider, ServerlessClasses, ServerlessLogger } from './specs'
 
 interface ServerlessProvider {
+    stackName: string;
     naming: {
         getCompiledTemplateFileName: () => string;
-        getStackName: () => string;
-    },
+    }
 }
 
 interface DiffCommon {
@@ -38,7 +38,6 @@ interface Serverless {
 class ServerlessPlugin {
     protected serverless: Serverless;
     protected newTemplateFile: string;
-    protected specName: string;
     protected _specProvider: Provider;
     protected providerName: string;
     protected log: ServerlessLogger;
@@ -82,7 +81,6 @@ class ServerlessPlugin {
             '.serverless',
             newTemplateName,
         );
-        this.specName = provider.naming.getStackName();
     }
 
     public get specProvider() {
@@ -111,7 +109,8 @@ class ServerlessPlugin {
         try {
             const data = await readFile(this.newTemplateFile, 'utf8');
             const newTemplate = JSON.parse(data);
-            return this._specProvider.diff(this.specName, newTemplate);
+            const stackName = this.serverless.service.provider.stackName;
+            return this._specProvider.diff(stackName, newTemplate);
         } catch (err) {
             if (err.code === 'ENOENT') {
                 const errorPrefix = `${this.newTemplateFile} could not be found`;
